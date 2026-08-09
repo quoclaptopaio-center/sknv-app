@@ -51,6 +51,13 @@
     transform:translateY(0);transition:.2s;
   }
   .dot{width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6FEFA0,#2F8F4E);box-shadow:0 0 10px #4ADE80, 0 0 3px rgba(0,0,0,.2) inset;}
+  .author-line{
+    margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+    color:#0F3D24;letter-spacing:.02em;border:1px solid #7FD9A8;
+    background:linear-gradient(145deg,#EFFFF6,#C8F3D9 45%,#9FE8C0);
+    border-radius:20px;padding:10px 18px;width:fit-content;margin-left:auto;text-align:center;
+    box-shadow:0 10px 24px -8px rgba(47,143,78,.4), inset 0 1px 0 rgba(255,255,255,.8), inset 0 -2px 4px rgba(47,143,78,.25);
+  }
 
   .step{margin-bottom:22px;}
   .step-label{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -131,6 +138,8 @@
   .rank-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);}
   .rank-table th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:#F5E6C8;padding:13px 14px;background:linear-gradient(120deg,#3A2A12,#6B4A1E,#3A2A12);border-bottom:1px solid #6B4A1E;}
   .rank-table td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;}
+  .stars{color:var(--gold-bright);font-size:12px;letter-spacing:1px;}
+  .star-empty{color:var(--border);}
   .rank-table tr:last-child td{border-bottom:none;}
   .rank-table td.num{font-family:'IBM Plex Mono',monospace;text-align:right;}
 
@@ -210,7 +219,10 @@
       <h1>Sức Khỏe Nhân Viên</h1>
       <a href="https://youtu.be/GBDTWGrmdQs" target="_blank" rel="noopener" class="video-link">▶ Video hướng dẫn</a>
     </div>
-    <div class="badge-live"><span class="dot"></span> QUOCPRO.COM — 1 CLICK CHUỘT CÀI ĐẶT XONG LAPTOP BÁN MỚI</div>
+    <div>
+      <div class="badge-live"><span class="dot"></span> QUOCPRO.COM — 1 CLICK CHUỘT CÀI ĐẶT XONG LAPTOP BÁN MỚI</div>
+      <div class="author-line">Tác giả: 46480</div>
+    </div>
   </div>
 
   <div class="step">
@@ -324,9 +336,11 @@ function parseDoanhThu(text){
     }
     const m = empMatch(label);
     if(!m) continue; // skip BP subtotal rows etc.
+    const dtqdVal = parseNum(cells[2]);
+    if(dtqdVal < 0) continue; // DT Quy Đổi âm = nhân viên đã nghỉ việc, loại khỏi danh sách siêu thị
     employees[m.ma] = {
       ma:m.ma, ten:m.ten,
-      dtlk:parseNum(cells[1]), dtqd:parseNum(cells[2]),
+      dtlk:parseNum(cells[1]), dtqd:dtqdVal,
       hieuQuaQD:parseNum(cells[3]), soLuong:parseNum(cells[4]), donGia:parseNum(cells[5])
     };
     order.push(m.ma);
@@ -515,7 +529,7 @@ const CUM1_COLS = [
   {key:'dtqd', label:'DT Quy Đổi', type:'num', align:'right'},
   {key:'mucTieuDT', label:'Mục Tiêu', type:'num', align:'right'},
   {key:'dkhtDT', label:'Dự Kiến Hoàn Thành', type:'num'},
-  {key:'nangSuat', label:'Năng Suất', type:'num', align:'right'},
+  {key:'nangSuat', label:'TB DT QĐ NV Trên 1 GC', type:'num', align:'right'},
   {key:'gioCong', label:'Giờ Công', type:'num', align:'right'}
 ];
 
@@ -615,11 +629,35 @@ function cum3SortedRanked(){
   });
   return copy;
 }
+function cum3StarsMap(){
+  const ranked = window.__cum3.ranked;
+  const map = {};
+  if(!ranked || ranked.length===0) return map;
+  const belows = ranked.map(e=>e.belowTarget);
+  const min = Math.min(...belows), max = Math.max(...belows);
+  ranked.forEach(e=>{
+    let stars;
+    if(max===min) stars = 5;
+    else{
+      const score = 1 - (e.belowTarget-min)/(max-min); // 1 = tốt nhất (ít NH dưới 100% nhất)
+      stars = Math.round(1 + score*4); // quy về thang 1-5 sao
+    }
+    map[e.ma] = stars;
+  });
+  return map;
+}
+function starsHtml(n){
+  let s = '<span class="stars">';
+  for(let i=0;i<5;i++){ s += i<n ? '★' : '<span class="star-empty">★</span>'; }
+  s += '</span>';
+  return s;
+}
 function buildCum3Rows(){
   const sorted = cum3SortedRanked();
+  const starsMap = cum3StarsMap();
   return sorted.map(e=>`
     <tr class="${e.avgPct!==null && e.avgPct<0.65?'low-row':''}">
-      <td>${e.ten}</td>
+      <td>${e.ten} ${starsHtml(starsMap[e.ma]||0)}</td>
       <td class="num" style="color:${e.belowTarget<=20?'var(--green)':(e.belowTarget<=30?'var(--amber)':'var(--red)')}">${e.belowTarget}</td>
       <td class="num" style="color:${pctColor(e.avgPct)}">${fmtPct(e.avgPct)}</td>
     </tr>`).join('');
@@ -938,8 +976,8 @@ function runAnalysis(){
     ${errHtml}${warnHtml}
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Target siêu thị</div><div class="stat-value">${manualTarget?fmtNum(manualTarget):'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Lũy kế doanh thu QĐ</div><div class="stat-value copper">${Math.round(totalDTQD).toLocaleString('vi-VN')}</div></div>
-      <div class="stat-card"><div class="stat-label">% Hoàn thành</div><div class="stat-value gold">${manualTarget?fmtPct(totalDTQD/manualTarget):'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Tổng DT QĐ ALL NV</div><div class="stat-value copper">${Math.round(totalDTQD).toLocaleString('vi-VN')}</div></div>
+      <div class="stat-card"><div class="stat-label">% DT QĐ NV / Target</div><div class="stat-value gold">${manualTarget?fmtPct(totalDTQD/manualTarget):'—'}</div></div>
       <div class="stat-card"><div class="stat-label">Số Lượng NV</div><div class="stat-value">${soNVBanHang}</div></div>
     </div>
 
@@ -1054,7 +1092,7 @@ async function exportExcel(){
   ws1.getRow(3).height = 4;
 
   const hdr1 = ws1.getRow(4);
-  ['Mã NV','Tên Nhân Viên','DT Quy Đổi','Mục Tiêu','Dự Kiến Hoàn Thành','Năng Suất','Giờ Công'].forEach((h,i)=>{
+  ['Mã NV','Tên Nhân Viên','DT Quy Đổi','Mục Tiêu','Dự Kiến Hoàn Thành','TB DT QĐ NV Trên 1 GC','Giờ Công'].forEach((h,i)=>{
     const c = hdr1.getCell(i+1);
     c.value = h; c.font = {bold:true, color:{argb:XC.textGold}, size:10.5};
     c.fill = xlHeaderFill(XC.darkBrown); c.alignment = {horizontal:'left', vertical:'middle'};
