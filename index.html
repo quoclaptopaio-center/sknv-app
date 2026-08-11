@@ -71,6 +71,15 @@
   }
   textarea:focus{outline:none;border-color:var(--copper);}
   textarea::placeholder{color:var(--text-dim);}
+  .file-drop{
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    width:100%;min-height:70px;background:var(--surface);border:1.5px dashed var(--border);
+    border-radius:12px;color:var(--text-dim);padding:16px;font-family:'Inter',sans-serif;
+    font-size:13px;font-weight:600;cursor:pointer;transition:.2s;box-shadow:var(--shadow-sm);position:relative;
+  }
+  .file-drop:hover{border-color:var(--copper);background:var(--surface-alt);}
+  .file-drop.filled{border-style:solid;border-color:var(--gold-bright);color:var(--text);background:var(--surface-alt);}
+  .file-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;}
   .inline-inputs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
   .inline-inputs.single{grid-template-columns:1fr;max-width:400px;}
   @media (max-width:700px){.inline-inputs{grid-template-columns:1fr;}}
@@ -231,18 +240,21 @@
   </div>
 
   <div class="step">
-    <div class="step-label"><div class="step-num">2</div><div class="step-title">LŨY KẾ GIỜ CÔNG NHÂN VIÊN</div></div>
-    <textarea id="paste2"></textarea>
-  </div>
-
-  <div class="step">
-    <div class="step-label"><div class="step-num">3</div><div class="step-title">LŨY KẾ KHAI THÁC NHTĐ NHÂN VIÊN</div></div>
+    <div class="step-label"><div class="step-num">2</div><div class="step-title">LŨY KẾ KHAI THÁC NHTĐ NHÂN VIÊN</div></div>
     <textarea id="paste3"></textarea>
   </div>
 
   <div class="step">
-    <div class="step-label"><div class="step-num">4</div><div class="step-title">TARGET NHTĐ CỦA SIÊU THỊ</div></div>
+    <div class="step-label"><div class="step-num">3</div><div class="step-title">TARGET NHTĐ CỦA SIÊU THỊ</div></div>
     <textarea id="paste4"></textarea>
+  </div>
+
+  <div class="step">
+    <div class="step-label"><div class="step-num">4</div><div class="step-title">LK GIỜ CÔNG NV - ADD FILE TỪ MWGWORK (KHÔNG BẮT BUỘC, CÓ THỂ BỎ QUA)</div></div>
+    <label class="file-drop" id="gioCongDrop">
+      <span id="gioCongFileLabel">Bấm để chọn file Excel giờ công (.xlsx) từ MWGwork — hoặc bỏ qua nếu chưa có</span>
+      <input type="file" id="gioCongFile" accept=".xlsx,.xls" onchange="handleGioCongFile(this)">
+    </label>
   </div>
 
   <div class="inline-inputs single">
@@ -419,6 +431,72 @@ function parseGioCong(text, roster){
   let best=null, bestCount=0;
   Object.keys(storeVotes).forEach(k=>{ if(storeVotes[k]>bestCount){bestCount=storeVotes[k]; best=k;} });
   return {employees, storeNameGuess:best, error: Object.keys(employees).length===0? 'Không đọc được dòng nhân viên nào':null, skipped};
+}
+
+// ---------- Giờ công từ file Excel MWGwork (thay cho paste) ----------
+// File thô dạng nhiều dòng/nhân viên/ca — cộng dồn "Tổng Giờ Công (X.Nhận)" theo Mã NV.
+function parseGioCongExcelFile(workbook){
+  try{
+    const sheetName = workbook.SheetNames[0];
+    const ws = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+    if(!rows || rows.length<2) return {employees:{}, storeNameGuess:null, error:'File rỗng hoặc không đọc được dữ liệu'};
+    const header = (rows[0]||[]).map(h=>clean(h).toLowerCase());
+    const idxMa = header.findIndex(h=>h==='mã nv');
+    const idxTen = header.findIndex(h=>h==='tên nv');
+    const idxGio = header.findIndex(h=>h.includes('tổng giờ công'));
+    const idxTenST = header.findIndex(h=>h==='tên siêu thị');
+    if(idxMa===-1 || idxGio===-1) return {employees:{}, storeNameGuess:null, error:'Không tìm thấy cột "Mã NV" hoặc "Tổng Giờ Công (X.Nhận)" trong file'};
+    const employees = {};
+    const storeVotes = {};
+    for(let r=1;r<rows.length;r++){
+      const row = rows[r]; if(!row) continue;
+      const maRaw = row[idxMa];
+      if(maRaw===null||maRaw===undefined||clean(maRaw)==='') continue;
+      const ma = String(Math.trunc(Number(maRaw))||clean(maRaw));
+      const ten = idxTen>=0? clean(row[idxTen]) : '';
+      const gio = parseNum(row[idxGio]);
+      const tenST = idxTenST>=0? clean(row[idxTenST]) : '';
+      if(!employees[ma]) employees[ma] = {ma, ten, gioCong:0, tenSieuThi:tenST};
+      employees[ma].gioCong += gio;
+      if(tenST) storeVotes[tenST]=(storeVotes[tenST]||0)+1;
+    }
+    let best=null, bestCount=0;
+    Object.keys(storeVotes).forEach(k=>{ if(storeVotes[k]>bestCount){bestCount=storeVotes[k]; best=k;} });
+    return {employees, storeNameGuess:best, error: Object.keys(employees).length===0? 'Không đọc được dòng dữ liệu nào':null};
+  }catch(e){
+    return {employees:{}, storeNameGuess:null, error:'Lỗi đọc file Excel: '+e.message};
+  }
+}
+function handleGioCongFile(input){
+  const file = input.files && input.files[0];
+  const dropEl = document.getElementById('gioCongDrop');
+  const labelEl = document.getElementById('gioCongFileLabel');
+  if(!file){
+    window.__gioCongFileData = null;
+    if(dropEl) dropEl.classList.remove('filled');
+    if(labelEl) labelEl.textContent = 'Bấm để chọn file Excel giờ công (.xlsx) từ MWGwork — hoặc bỏ qua nếu chưa có';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const parsed = parseGioCongExcelFile(wb);
+      window.__gioCongFileData = parsed;
+      if(dropEl) dropEl.classList.add('filled');
+      if(labelEl){
+        labelEl.textContent = parsed.error
+          ? ('✗ '+file.name+' — '+parsed.error)
+          : ('✓ '+file.name+' — '+Object.keys(parsed.employees).length+' nhân viên');
+      }
+    }catch(e){
+      window.__gioCongFileData = {employees:{}, storeNameGuess:null, error:'Lỗi đọc file: '+e.message};
+      if(labelEl) labelEl.textContent = '✗ Lỗi đọc file: '+e.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ---------- Parser 3: Lũy kế ngành hàng theo nhân viên ----------
@@ -814,7 +892,6 @@ function reorderByThiDuaProgram(cats){
 
 function runAnalysis(){
   const t1 = document.getElementById('paste1').value;
-  const t2 = document.getElementById('paste2').value;
   const t3 = document.getElementById('paste3').value;
   const t4 = document.getElementById('paste4').value;
   const manualTarget = parseNum(document.getElementById('storeTarget').value);
@@ -831,14 +908,15 @@ function runAnalysis(){
     return;
   }
   const roster = dt.employees;
-  const gc = parseGioCong(t2, roster);
+  // Giờ công giờ đọc từ file Excel MWGwork đã upload (không bắt buộc — có thể bỏ qua)
+  const gc = window.__gioCongFileData || {employees:{}, storeNameGuess:null, error:null};
   const lk = parseLuyKeNganhHang(t3);
   const tg = parseTargetNganhHang(t4);
 
   const errors=[];
-  if(gc.error) errors.push('Bước 2 (Giờ công): '+gc.error);
-  if(lk.error) errors.push('Bước 3 (Lũy kế ngành hàng): '+lk.error);
-  if(tg.error) errors.push('Bước 4 (Target ngành hàng): '+tg.error);
+  if(gc.error) errors.push('Bước 4 (Giờ công): '+gc.error);
+  if(lk.error) errors.push('Bước 2 (Lũy kế ngành hàng): '+lk.error);
+  if(tg.error) errors.push('Bước 3 (Target ngành hàng): '+tg.error);
 
   const soNVBanHang = dt.order.length;
   const mucTieuDoanhThuCaNhan = (manualTarget>0 && soNVBanHang>0) ? manualTarget/soNVBanHang : null;
