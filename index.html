@@ -51,13 +51,36 @@
     transform:translateY(0);transition:.2s;
   }
   .dot{width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6FEFA0,#2F8F4E);box-shadow:0 0 10px #4ADE80, 0 0 3px rgba(0,0,0,.2) inset;}
+  .header-right-group{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
   .author-line{
-    margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
     color:#0F3D24;letter-spacing:.02em;border:1px solid #7FD9A8;
     background:linear-gradient(145deg,#EFFFF6,#C8F3D9 45%,#9FE8C0);
-    border-radius:20px;padding:10px 18px;width:fit-content;margin-left:auto;text-align:center;
+    border-radius:20px;padding:10px 18px;width:fit-content;text-align:center;height:fit-content;
     box-shadow:0 10px 24px -8px rgba(47,143,78,.4), inset 0 1px 0 rgba(255,255,255,.8), inset 0 -2px 4px rgba(47,143,78,.25);
   }
+  .product-list{
+    position:relative;overflow:hidden;
+    padding:16px 24px;border-radius:16px;
+    background:linear-gradient(160deg,#FFFDF6 0%,#FBF0D6 55%,#F3DFAE 100%);
+    border:1px solid #E0C077;width:fit-content;
+    box-shadow:0 16px 34px -14px rgba(184,103,42,.3), inset 0 1px 0 rgba(255,255,255,.9), inset 0 -2px 5px rgba(184,103,42,.1);
+  }
+  .product-list::before{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(115deg,transparent 30%, rgba(255,255,255,.55) 45%, rgba(255,255,255,.75) 50%, rgba(255,255,255,.55) 55%, transparent 70%);
+    background-size:220% 100%;animation:shimmer 6s linear infinite;pointer-events:none;
+  }
+  .product-list::after{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+    background:linear-gradient(180deg,var(--copper),var(--gold-bright));
+  }
+  .product-item{
+    position:relative;z-index:1;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;color:#5A4520;
+    text-align:left;line-height:1.9;white-space:nowrap;text-transform:uppercase;letter-spacing:.02em;
+  }
+  .product-item b{color:var(--copper);font-weight:700;}
 
   .step{margin-bottom:22px;}
   .step-label{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -228,9 +251,14 @@
       <h1>Sức Khỏe Nhân Viên</h1>
       <a href="https://youtu.be/GBDTWGrmdQs" target="_blank" rel="noopener" class="video-link">▶ Video hướng dẫn</a>
     </div>
-    <div>
-      <div class="badge-live"><span class="dot"></span> QUOCPRO.COM — 1 CLICK CHUỘT CÀI ĐẶT XONG LAPTOP BÁN MỚI</div>
+    <div class="header-right-group">
       <div class="author-line">Tác giả: 46480</div>
+      <div class="product-list">
+        <div class="product-item"><b>QUOCPRO.COM</b> ⇒ 1 CLICK CHUỘT CÀI ĐẶT XONG LAPTOP BÁN MỚI</div>
+        <div class="product-item"><b>BI.QUOCPRO.COM</b> ⇒ ĐỔ SỨC KHỎE DT ST (VÙNG HCM)</div>
+        <div class="product-item"><b>SKNV.QUOCPRO.COM</b> ⇒ ĐỔ SỨC KHỎE DT/NHTĐ NHÂN VIÊN ST</div>
+        <div class="product-item"><b>RT.QUOCPRO.COM</b> ⇒ ĐỔ DT/NHTĐ REALTIME TRONG CA LÀM VIỆC</div>
+      </div>
     </div>
   </div>
 
