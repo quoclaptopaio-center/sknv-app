@@ -331,7 +331,9 @@ function detectStoreNameFromText(text){
   const lines = splitLines(text);
   for(const raw of lines){
     const line = clean(raw.split('\t')[0]);
-    const m = line.match(/(?:DTST:\s*)?([A-ZĐÂÊÔƠƯ0-9]+_HCM_TDU\s*-\s*\d+\s+.+)/);
+    // Mã siêu thị dạng <chuỗi>_<vùng>_<hậu tố> - <tên> — áp dụng mọi vùng miền,
+    // không bắt buộc có số nhà (một số siêu thị chỉ ghi tên phường/xã).
+    const m = line.match(/(?:DTST:\s*)?([A-ZĐÂÊÔƠƯ0-9]+_[A-ZĐÂÊÔƠƯ0-9]+_[A-ZĐÂÊÔƠƯ0-9]+\s*-\s*.+)/);
     if(m) return m[1].trim();
   }
   return null;
@@ -1003,7 +1005,7 @@ function runAnalysis(){
   let errHtml='';
   if(errors.length) errHtml = `<div class="warn-box err"><h4>✗ LỖI ĐỌC DỮ LIỆU</h4><ul>${errors.map(w=>`<li>${w}</li>`).join('')}</ul></div>`;
 
-  const storeName = gc.storeNameGuess || detectStoreNameFromText(t1) || detectStoreNameFromText(t4) || detectStoreNameFromText(t3) || detectStoreNameFromText(t2);
+  const storeName = gc.storeNameGuess || detectStoreNameFromText(t1) || detectStoreNameFromText(t4) || detectStoreNameFromText(t3);
 
   // Ranking table (Cụm 3 — sortable)
   const ranked = [...merged].filter(e=>e.totalCats>0).sort((a,b)=>a.belowTarget-b.belowTarget);
