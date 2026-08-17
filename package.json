@@ -1,0 +1,17 @@
+{
+  "name": "sknv-app",
+  "version": "1.0.0",
+  "description": "Dashboard đo lường doanh thu và thi đua ngành hàng nhân viên",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static HTML project - no build needed'",
+    "lint": "echo 'No linter configured for static HTML project'"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.1.1"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
